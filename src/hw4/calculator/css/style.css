@@ -1,0 +1,40 @@
+.text-field{
+    -fx-padding: 0;
+}
+.button{
+    -fx-padding: 5;
+    -fx-font-size: 30;
+    -fx-font-weight: bold;
+    -fx-max-width: 1000;
+    -fx-min-width: 80;
+}
+.button:hover{
+    -fx-background-color: limegreen;
+}
+.memButtom{
+    -fx-background-color: lightskyblue;
+}
+.funcButton{
+    -fx-background-color: lightsteelblue;
+}
+.numberButton{
+    -fx-background-color: lightgray;
+}
+#equalsBtn {
+    -fx-background-color: green;
+}
+#equalsBtn:hover {
+    -fx-background-color: aquamarine;
+}
+#delBtn {
+    -fx-background-color: orange;
+}
+#delBtn:hover{
+   -fx-background-color: limegreen;
+}
+.cButton {
+    -fx-background-color: orangered;
+}
+.text-area .content {
+    -fx-background-color: blanchedalmond;
+}
