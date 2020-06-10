@@ -58,4 +58,23 @@ public class Server {
     public AuthService getAuthService() {
         return authService;
     }
+
+    public ClientHandler getSubscribedClientByNick(String nick){
+        for (ClientHandler c : clients) {
+            if (c.getNick().equals(nick))
+                return c;
+        }
+        return null;
+    }
+
+    public String getSubscribedNicks() {
+        String nicks = "";
+        for (ClientHandler c : clients) {
+            if (!nicks.equals("")) {
+                nicks += ", ";
+            }
+            nicks += c.getNick();
+        }
+        return nicks;
+    }
 }
