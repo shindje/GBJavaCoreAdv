@@ -8,22 +8,20 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.ListView;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.util.Date;
+import java.util.Properties;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -32,7 +30,7 @@ public class Controller implements Initializable {
     @FXML
     public TextField textField;
     @FXML
-    public HBox authPanel;
+    public VBox authPanel;
     @FXML
     public TextField loginField;
     @FXML
@@ -41,6 +39,8 @@ public class Controller implements Initializable {
     public HBox msgPanel;
     @FXML
     public ListView<String> clientList;
+    @FXML
+    public CheckBox saveLoginAndPassCheckBox;
 
     Stage regStage;
 
@@ -55,7 +55,6 @@ public class Controller implements Initializable {
     private String nick;
 
     public void setAuthenticated(boolean authenticated) {
-        this.authenticated = authenticated;
         authPanel.setVisible(!authenticated);
         authPanel.setManaged(!authenticated);
         msgPanel.setManaged(authenticated);
@@ -65,13 +64,17 @@ public class Controller implements Initializable {
         if (!authenticated) {
             nick = "";
         }
-        textArea.clear();
+        if (this.authenticated != authenticated) {
+            textArea.clear();
+        }
         setTitle(nick);
+        this.authenticated = authenticated;
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setAuthenticated(false);
+        loadLoginAndPass();
 
         regStage = createRegWindow();
 
@@ -101,7 +104,7 @@ public class Controller implements Initializable {
 
             new Thread(() -> {
                 try {
-                    //цикл аутентификации
+                    //цикл аутентификации и регистрации
                     while (true) {
                         String str = in.readUTF();
 
@@ -111,9 +114,25 @@ public class Controller implements Initializable {
                             nick = str.split(" ")[1];
                             setAuthenticated(true);
                             break;
+                        } else if (str.startsWith("/reg")) {
+                            Platform.runLater(() -> {
+                                if (str.equals("/reg_ok")) {
+                                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                                    alert.setTitle("Регистрация");
+                                    alert.setHeaderText("Регистрация прошла успешно");
+                                    alert.showAndWait();
+                                }
+                                if (str.equals("/reg_error")) {
+                                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                                    alert.setTitle("Ошибка регистрации");
+                                    alert.setHeaderText("Регистрация  не удалась. \n" +
+                                            "Возможно логин уже занят, или данные содержат пробел");
+                                    alert.showAndWait();
+                                }
+                            });
+                        } else {
+                            showText(str);
                         }
-
-                        textArea.appendText(str + "\n");
                     }
 
                     //цикл работы
@@ -136,9 +155,11 @@ public class Controller implements Initializable {
                             }
 
                         } else {
-                            textArea.appendText(str + "\n");
+                            showText(str);
                         }
                     }
+                } catch (EOFException e) {
+                    System.out.println("Сокет отключен");
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
@@ -167,6 +188,10 @@ public class Controller implements Initializable {
     }
 
     public void tryToAuth(ActionEvent actionEvent) {
+        if (saveLoginAndPassCheckBox.isSelected()) {
+            saveLoginAndPass();
+        }
+
         if (socket == null || socket.isClosed()) {
             connect();
         }
@@ -234,4 +259,55 @@ public class Controller implements Initializable {
 
     }
 
+    public void exit(ActionEvent actionEvent) {
+        try {
+            out.writeUTF("/end");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void showText(String text) {
+        textArea.appendText(String.format("%tT %s\n", new Date(), text));
+    }
+
+    File getLoginAndPassFile() {
+        String userHome = System.getProperty("user.home");
+        File file = new File(userHome + File.separator + "superchat.save");
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return file;
+    }
+
+    void saveLoginAndPass() {
+        try (OutputStream out =  new FileOutputStream(getLoginAndPassFile())) {
+            Properties properties = new Properties();
+            properties.setProperty("login", loginField.getText());
+            properties.setProperty("password", passwordField.getText());
+            properties.store(out, null);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    void loadLoginAndPass() {
+        try (InputStream in =  new FileInputStream(getLoginAndPassFile())) {
+            Properties properties = new Properties();
+            properties.load(in);
+            loginField.setText(properties.getProperty("login"));
+            passwordField.setText(properties.getProperty("password"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
